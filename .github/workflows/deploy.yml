@@ -27,7 +27,7 @@ jobs:
           cache: 'npm'
 
       # Install deps and build
-      - run: npm ci --no-audit --no-fund
+      - run: npm install --legacy-peer-deps
       - run: npm run build
 
       # Required for GitHub Pages
