@@ -28,6 +28,7 @@ jobs:
           cache: 'npm'
 
       # Install deps (avoid npm ci lockfile mismatch)
+      - run: rm -rf node_modules package-lock.json
       - run: npm install --legacy-peer-deps --ignore-scripts=false
 
       # Build Vite project
