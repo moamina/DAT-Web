@@ -13,6 +13,7 @@ interface CanvasProps {
   onSelectElement: (elementId: string | null) => void;
   onDeleteElement: (elementId: string) => void;
   onAddBehaviouralElement: (nodeId: string, element: BehaviouralElement) => void;
+  onDeleteBehaviouralElement?: (nodeId: string, elementId: string) => void;
   onConnectNodes: (sourceNodeId: string, targetNodeId: string, sourcePortId: string, targetPortId: string) => void;
   internalConnections: InternalConnection[];
   internalConnectingFrom: { nodeId: string; elementId: string; portType: 'input' | 'output' } | null;
@@ -32,6 +33,7 @@ const Canvas: React.FC<CanvasProps> = ({
   onSelectElement,
   onDeleteElement,
   onAddBehaviouralElement,
+  onDeleteBehaviouralElement,
   onConnectNodes,
   internalConnections,
   internalConnectingFrom,
@@ -415,6 +417,7 @@ const Canvas: React.FC<CanvasProps> = ({
             onUpdate={(updates) => onUpdateNode(node.id, updates)}
             onPortClick={handlePortClick}
             onAddBehaviouralElement={(element) => onAddBehaviouralElement(node.id, element)}
+            onDeleteBehaviouralElement={(elementId) => onDeleteBehaviouralElement?.(node.id, elementId)}
             onDragOver={(e) => handleNodeDragOver(node.id, e)}
             onDragLeave={() => handleNodeDragLeave(node.id)}
             onDrop={(e) => handleNodeDrop(node.id, e)}

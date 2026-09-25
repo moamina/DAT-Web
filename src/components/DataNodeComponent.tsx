@@ -12,6 +12,7 @@ interface DataNodeComponentProps {
   onUpdate: (updates: Partial<DataNode>) => void;
   onPortClick: (nodeId: string, portId: string, portType: 'input' | 'output') => void;
   onAddBehaviouralElement: (element: BehaviouralElement) => void;
+  onDeleteBehaviouralElement?: (elementId: string) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDragLeave?: () => void;
   onDrop?: (e: React.DragEvent) => void;
@@ -34,6 +35,7 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
   onUpdate,
   onPortClick,
   onAddBehaviouralElement,
+  onDeleteBehaviouralElement,
   onDragOver,
   onDragLeave,
   onDrop,
@@ -624,8 +626,13 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
                     : null
                 }
                 onDelete={() => {
-                  const updatedElements = node.behaviouralElements.filter(el => el.id !== element.id);
-                  onUpdate({ behaviouralElements: updatedElements });
+                  if (onDeleteBehaviouralElement) {
+                    // Removes the element AND every internal link (in/out) that touched it
+                    onDeleteBehaviouralElement(element.id);
+                  } else {
+                    const updatedElements = node.behaviouralElements.filter(el => el.id !== element.id);
+                    onUpdate({ behaviouralElements: updatedElements });
+                  }
                 }}
               />
             ))}

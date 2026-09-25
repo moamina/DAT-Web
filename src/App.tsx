@@ -26,6 +26,7 @@ function App() {
     updateConnection,
     handleInternalPortClick,
     addBehaviouralElement,
+    deleteBehaviouralElement,
     deleteElement,
     exportModel,
     importModel,
@@ -208,6 +209,7 @@ function App() {
             onSelectElement={setSelectedElement}
             onDeleteElement={deleteElement}
             onAddBehaviouralElement={addBehaviouralElement}
+            onDeleteBehaviouralElement={deleteBehaviouralElement}
             onConnectNodes={addConnection}
             onInternalPortClick={handleInternalPortClick}
             onDeleteInternalConnection={deleteInternalConnection}

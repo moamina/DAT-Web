@@ -262,6 +262,22 @@ export const useDataArchitecture = () => {
     }
   }, [architecture.dataNodes, recordSnapshot]);
 
+  const deleteBehaviouralElement = useCallback((nodeId: string, elementId: string) => {
+    recordSnapshot();
+    setArchitecture(prev => ({
+      ...prev,
+      dataNodes: prev.dataNodes.map(n =>
+        n.id === nodeId
+          ? { ...n, behaviouralElements: n.behaviouralElements.filter(el => el.id !== elementId) }
+          : n
+      )
+    }));
+    // Remove every internal link (in and out) that pointed to this element
+    setInternalConnections(prev =>
+      prev.filter(conn => conn.sourceElementId !== elementId && conn.targetElementId !== elementId)
+    );
+  }, [recordSnapshot]);
+
   const addInternalConnection = useCallback((
     nodeId: string,
     sourceElementId: string,
@@ -399,6 +415,7 @@ export const useDataArchitecture = () => {
     internalConnections,
     selectedElement,
     internalConnectingFrom,
+    deleteBehaviouralElement,
     canUndo: history.past.length > 0,
     canRedo: history.future.length > 0,
     undo,
