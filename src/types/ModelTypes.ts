@@ -22,6 +22,8 @@ export interface BehaviouralElement {
   position: Position;
   size: Size;
   properties?: Record<string, any>;
+  icon?: string;
+  color?: string;
 }
 
 export interface DataFlow {

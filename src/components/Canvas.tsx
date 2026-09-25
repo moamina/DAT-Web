@@ -192,7 +192,9 @@ const Canvas: React.FC<CanvasProps> = ({
             type: item.type,
             position: { x, y },
             size: { width: 120, height: 40 },
-            properties: item.properties || {}
+            properties: item.properties || {},
+            icon: item.icon,
+            color: item.color
           };
           
           onAddBehaviouralElement(nodeId, newElement);

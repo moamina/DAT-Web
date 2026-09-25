@@ -205,25 +205,13 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                         <div className="flex items-center space-x-2">
                           <span className="text-sm">
                             {element.type === 'Process' ? '⚙️' :
-                             element.type === 'Store' ? '💾' :
-                             element.type === 'Analyze' ? '🔬' :
+                             element.type === 'Store' ? '💿' :
+                             element.type === 'Analyze' ? '🔍' :
                              element.type === 'Ingest' ? '📥' :
-                             element.type === 'VerifyData' ? '🛡️' :
-                             element.type === 'SendData' ? '📤' :
+                             element.type === 'VerifyData' ? '✅' :
+                             element.type === 'SendData' ? '📧' :
                              element.type === 'ReceiveData' ? '📨' :
-                             element.type === 'Transform' ? '🔄' :
-                             element.type === 'Validate' ? '✅' :
-                             element.type === 'Filter' ? '🔽' :
-                             element.type === 'Merge' ? '🔀' :
-                             element.type === 'Classify' ? '🏷️' :
-                             element.type === 'Aggregate' ? '🧮' :
-                             element.type === 'Cleaning' ? '🧹' :
-                             element.type === 'Govern' ? '⚖️' :
-                             element.type === 'Predict' ? '🔮' :
-                             element.type === 'Diagnose' ? '🩺' :
-                             element.type === 'Visualize' ? '📊' :
-                             element.type === 'Generate' ? '✨' :
-                             '🔧'}
+                             '📋'}
                           </span>
                           <span className="font-medium text-gray-800">{element.name}</span>
                         </div>

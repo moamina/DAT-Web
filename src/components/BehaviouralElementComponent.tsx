@@ -34,32 +34,22 @@ const BehaviouralElementComponent: React.FC<BehaviouralElementComponentProps> = 
     }
   };
 
+  // Fallback icons for elements created before `icon` was stored on the
+  // element itself (e.g. loaded from an older exported/imported model).
   const getElementIcon = (type: string) => {
     switch (type) {
       case 'Process': return '⚙️';
-      case 'Store': return '💾';
-      case 'Analyze': return '🔬';
+      case 'Store': return '💿';
+      case 'Analyze': return '🔍';
       case 'Ingest': return '📥';
-      case 'VerifyData': return '🛡️';
-      case 'SendData': return '📤';
-      case 'ReceiveData': return '📨';
-      case 'Transform': return '🔄';
-      case 'Validate': return '✅';
-      case 'Filter': return '🔽';
-      case 'Merge': return '🔀';
-      case 'Classify': return '🏷️';
-      case 'Aggregate': return '🧮';
-      case 'Cleaning': return '🧹';
-      case 'Govern': return '⚖️';
-      case 'Retrieve': return '📤';
-      case 'Archive': return '🗃️';
-      case 'Predict': return '🔮';
-      case 'Diagnose': return '🩺';
-      case 'Visualize': return '📊';
-      case 'Generate': return '✨';
-      default: return '🔧';
+      case 'VerifyData': return '✅';
+      default: return '📋';
     }
   };
+
+  // Always prefer the icon that was actually shown in the toolbox palette
+  // when this element was dragged onto the canvas, so the two stay in sync.
+  const displayIcon = element.icon ?? getElementIcon(element.type);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -237,7 +227,7 @@ const BehaviouralElementComponent: React.FC<BehaviouralElementComponentProps> = 
         )}
 
         <div className="flex items-center justify-center h-full px-2">
-          <span className="mr-1 text-sm">{getElementIcon(element.type)}</span>
+          <span className="mr-1 text-sm">{displayIcon}</span>
           {isEditingName ? (
             <input
               type="text"
