@@ -37,11 +37,27 @@ const BehaviouralElementComponent: React.FC<BehaviouralElementComponentProps> = 
   const getElementIcon = (type: string) => {
     switch (type) {
       case 'Process': return '⚙️';
-      case 'Store': return '💿';
-      case 'Analyze': return '🔍';
+      case 'Store': return '💾';
+      case 'Analyze': return '🔬';
       case 'Ingest': return '📥';
-      case 'VerifyData': return '✅';
-      default: return '📋';
+      case 'VerifyData': return '🛡️';
+      case 'SendData': return '📤';
+      case 'ReceiveData': return '📨';
+      case 'Transform': return '🔄';
+      case 'Validate': return '✅';
+      case 'Filter': return '🔽';
+      case 'Merge': return '🔀';
+      case 'Classify': return '🏷️';
+      case 'Aggregate': return '🧮';
+      case 'Cleaning': return '🧹';
+      case 'Govern': return '⚖️';
+      case 'Retrieve': return '📤';
+      case 'Archive': return '🗃️';
+      case 'Predict': return '🔮';
+      case 'Diagnose': return '🩺';
+      case 'Visualize': return '📊';
+      case 'Generate': return '✨';
+      default: return '🔧';
     }
   };
 
