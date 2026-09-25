@@ -19,6 +19,7 @@ interface DataNodeComponentProps {
   internalConnectingFrom?: { nodeId: string; elementId: string; portType: 'input' | 'output' } | null;
   onInternalPortClick?: (nodeId: string, elementId: string, portType: 'input' | 'output') => void;
   internalConnections?: InternalConnection[];
+  zoom?: number;
   onDelete?: () => void;
   onDeleteInternalConnection?: (connectionId: string) => void;
 }
@@ -27,6 +28,7 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
   node,
   isSelected,
   isDragOver = false,
+  zoom = 1,
   onSelect,
   onDrag,
   onUpdate,
@@ -47,6 +49,7 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(node.name);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const initialPositionRef = useRef({ x: node.position.x, y: node.position.y });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [resizeDirection, setResizeDirection] = useState<string>('');
   const [draggingPort, setDraggingPort] = useState<string | null>(null);
@@ -132,16 +135,17 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
       onSelect();
       setIsDragging(true);
       setDragStart({
-        x: e.clientX - node.position.x,
-        y: e.clientY - node.position.y
+        x: e.clientX,
+        y: e.clientY
       });
+      initialPositionRef.current = { x: node.position.x, y: node.position.y };
     }
   };
 
   const handleMouseMove = React.useCallback((e: MouseEvent) => {
     if (isResizing) {
-      const deltaX = e.clientX - resizeStart.x;
-      const deltaY = e.clientY - resizeStart.y;
+      const deltaX = (e.clientX - resizeStart.x) / zoom;
+      const deltaY = (e.clientY - resizeStart.y) / zoom;
       
       let newWidth = resizeStart.width;
       let newHeight = resizeStart.height;
@@ -164,7 +168,7 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
       
       onUpdate({ size: { width: newWidth, height: newHeight }, messagePorts: updatedPorts });
     } else if (draggingPort) {
-      const deltaY = e.clientY - portDragStart.y;
+      const deltaY = (e.clientY - portDragStart.y) / zoom;
       const port = node.messagePorts.find(p => p.id === draggingPort);
       
       if (port) {
@@ -186,13 +190,16 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
         setPortDragStart({ x: e.clientX, y: e.clientY });
       }
     } else if (isDragging) {
+      const deltaX = (e.clientX - dragStart.x) / zoom;
+      const deltaY = (e.clientY - dragStart.y) / zoom;
       const newPosition = {
-        x: Math.max(0, e.clientX - dragStart.x),
-        y: Math.max(0, e.clientY - dragStart.y)
+        x: Math.max(0, initialPositionRef.current.x + deltaX),
+        y: Math.max(0, initialPositionRef.current.y + deltaY)
       };
       onDrag(node.id, newPosition);
     }
-  }, [isDragging, isResizing, draggingPort, dragStart, resizeStart, resizeDirection, portDragStart, node.id, node.isExpanded, node.size.height, node.messagePorts, onDrag, onUpdate]);
+  }, [isDragging, isResizing, draggingPort, dragStart, resizeStart, resizeDirection, portDragStart, zoom, node.id, node.isExpanded, node.size.height, node.messagePorts, onDrag, onUpdate]);
+
 
   const handleMouseUp = React.useCallback(() => {
     setIsDragging(false);

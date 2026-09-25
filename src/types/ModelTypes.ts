@@ -78,3 +78,9 @@ export interface ToolboxItem {
   color: string;
   properties?: Record<string, any>;
 }
+
+export interface Viewport {
+  x: number;
+  y: number;
+  zoom: number;
+}

@@ -1,5 +1,11 @@
 import { useState, useCallback } from 'react';
 import { DataArchitecture, DataNode, Connection, BehaviouralElement, ToolboxItem, InternalConnection } from '../types/ModelTypes';
+import { computeAutoLayout } from '../utils/autoLayout';
+
+interface ArchitectureSnapshot {
+  architecture: DataArchitecture;
+  internalConnections: InternalConnection[];
+}
 
 export const useDataArchitecture = () => {
   const [architecture, setArchitecture] = useState<DataArchitecture>({
@@ -17,7 +23,73 @@ export const useDataArchitecture = () => {
     portType: 'input' | 'output';
   } | null>(null);
 
+  // Undo / Redo history stacks
+  const [history, setHistory] = useState<{
+    past: ArchitectureSnapshot[];
+    future: ArchitectureSnapshot[];
+  }>({
+    past: [],
+    future: []
+  });
+
+  const recordSnapshot = useCallback(() => {
+    setHistory(prev => ({
+      past: [...prev.past.slice(-25), { architecture, internalConnections }],
+      future: []
+    }));
+  }, [architecture, internalConnections]);
+
+  const undo = useCallback(() => {
+    setHistory(prev => {
+      if (prev.past.length === 0) return prev;
+      const previous = prev.past[prev.past.length - 1];
+      const newPast = prev.past.slice(0, prev.past.length - 1);
+
+      setArchitecture(previous.architecture);
+      setInternalConnections(previous.internalConnections);
+      setSelectedElement(null);
+      setInternalConnectingFrom(null);
+
+      return {
+        past: newPast,
+        future: [{ architecture, internalConnections }, ...prev.future.slice(0, 25)]
+      };
+    });
+  }, [architecture, internalConnections]);
+
+  const redo = useCallback(() => {
+    setHistory(prev => {
+      if (prev.future.length === 0) return prev;
+      const next = prev.future[0];
+      const newFuture = prev.future.slice(1);
+
+      setArchitecture(next.architecture);
+      setInternalConnections(next.internalConnections);
+      setSelectedElement(null);
+      setInternalConnectingFrom(null);
+
+      return {
+        past: [...prev.past.slice(-25), { architecture, internalConnections }],
+        future: newFuture
+      };
+    });
+  }, [architecture, internalConnections]);
+
+  const clearCanvas = useCallback(() => {
+    recordSnapshot();
+    setArchitecture({
+      id: `arch-${Date.now()}`,
+      name: 'Data Architecture Model',
+      dataNodes: [],
+      connections: []
+    });
+    setInternalConnections([]);
+    setSelectedElement(null);
+    setInternalConnectingFrom(null);
+  }, [recordSnapshot]);
+
   const addDataNode = useCallback((item: ToolboxItem, position: { x: number; y: number }) => {
+    recordSnapshot();
     const nodeWidth = 180;
     const nodeHeight = 80;
     
@@ -51,118 +123,9 @@ export const useDataArchitecture = () => {
     }));
 
     return newNode.id;
-  }, []);
+  }, [recordSnapshot]);
 
   const updateNode = useCallback((nodeId: string, updates: Partial<DataNode>) => {
-    setArchitecture(prev => ({
-      ...prev,
-      dataNodes: prev.dataNodes.map(node =>
-        node.id === nodeId ? { ...node, ...updates } : node
-      )
-    }));
-    
-  }, []);
-
-  const deleteNode = useCallback((nodeId: string) => {
-    setArchitecture(prev => ({
-      ...prev,
-      dataNodes: prev.dataNodes.filter(node => node.id !== nodeId),
-      connections: prev.connections.filter(conn => 
-        conn.sourceNodeId !== nodeId && conn.targetNodeId !== nodeId
-      )
-    }));
-  }, []);
-
-  const addConnection = useCallback((
-    sourceNodeId: string,
-    targetNodeId: string,
-    sourcePortId: string,
-    targetPortId: string
-  ) => {
-    const newConnection: Connection = {
-      id: `conn-${Date.now()}`,
-      sourceNodeId,
-      targetNodeId,
-      sourcePortId,
-      targetPortId,
-      label: 'Data Flow'
-    };
-
-    setArchitecture(prev => ({
-      ...prev,
-      connections: [...prev.connections, newConnection]
-    }));
-  }, []);
-
-  const updateConnection = useCallback((connectionId: string, updates: Partial<Connection>) => {
-    setArchitecture(prev => ({
-      ...prev,
-      connections: prev.connections.map(conn =>
-        conn.id === connectionId ? { ...conn, ...updates } : conn
-      )
-    }));
-  }, []);
-
-  const deleteConnection = useCallback((connectionId: string) => {
-    setArchitecture(prev => ({
-      ...prev,
-      connections: prev.connections.filter(conn => conn.id !== connectionId)
-    }));
-    
-    // Also remove any connections that reference deleted ports
-    setArchitecture(prev => ({
-      ...prev,
-      connections: prev.connections.filter(conn => {
-        const sourceNode = prev.dataNodes.find(n => n.id === conn.sourceNodeId);
-        const targetNode = prev.dataNodes.find(n => n.id === conn.targetNodeId);
-        const sourcePortExists = sourceNode?.messagePorts.some(p => p.id === conn.sourcePortId);
-        const targetPortExists = targetNode?.messagePorts.some(p => p.id === conn.targetPortId);
-        return sourcePortExists && targetPortExists;
-      })
-    }));
-  }, []);
-
-  const addBehaviouralElement = useCallback((nodeId: string, element: BehaviouralElement) => {
-    updateNode(nodeId, {
-      behaviouralElements: [
-        ...architecture.dataNodes.find(n => n.id === nodeId)?.behaviouralElements || [],
-        element
-      ]
-    });
-
-    // Auto-create special connections for Receive Data and Send Data elements
-    const node = architecture.dataNodes.find(n => n.id === nodeId);
-    if (node) {
-      if (element.type === 'ReceiveData') {
-        // Connect ALL input ports to Receive Data element
-        const inputPorts = node.messagePorts.filter(p => p.type === 'input');
-        inputPorts.forEach(inputPort => {
-          const newConnection: InternalConnection = {
-            id: `internal-conn-${Date.now()}-${Math.random()}`,
-            sourceElementId: inputPort.id,
-            targetElementId: element.id,
-            nodeId: nodeId
-          };
-          setInternalConnections(prev => [...prev, newConnection]);
-        });
-      } else if (element.type === 'SendData') {
-        // Connect Send Data element to ALL output ports
-        const outputPorts = node.messagePorts.filter(p => p.type === 'output');
-        outputPorts.forEach(outputPort => {
-          const newConnection: InternalConnection = {
-            id: `internal-conn-${Date.now()}-${Math.random()}`,
-            sourceElementId: element.id,
-            targetElementId: outputPort.id,
-            nodeId: nodeId
-          };
-          setInternalConnections(prev => [...prev, newConnection]);
-        });
-      }
-    }
-  }, [architecture.dataNodes, updateNode]);
-
-  // Auto-create connections when new ports are added
-  const updateNodeEnhanced = useCallback((nodeId: string, updates: Partial<DataNode>) => {
     const currentNode = architecture.dataNodes.find(n => n.id === nodeId);
     
     setArchitecture(prev => ({
@@ -172,7 +135,7 @@ export const useDataArchitecture = () => {
       )
     }));
 
-    // Auto-connect new ports to existing elements
+    // Auto-connect new ports to existing elements if ports were added
     if (updates.messagePorts && currentNode && updates.messagePorts.length > currentNode.messagePorts.length) {
       const newPorts = updates.messagePorts.filter(newPort => 
         !currentNode.messagePorts.some(oldPort => oldPort.id === newPort.id)
@@ -180,7 +143,6 @@ export const useDataArchitecture = () => {
 
       newPorts.forEach(newPort => {
         if (newPort.type === 'input') {
-          // Connect new input port to all Receive Data elements
           currentNode.behaviouralElements
             .filter(el => el.type === 'ReceiveData')
             .forEach(receiveElement => {
@@ -193,7 +155,6 @@ export const useDataArchitecture = () => {
               setInternalConnections(prev => [...prev, newConnection]);
             });
         } else if (newPort.type === 'output') {
-          // Connect all Send Data elements to new output port
           currentNode.behaviouralElements
             .filter(el => el.type === 'SendData')
             .forEach(sendElement => {
@@ -210,23 +171,103 @@ export const useDataArchitecture = () => {
     }
   }, [architecture.dataNodes]);
 
-  const originalUpdateNode = useCallback((nodeId: string, updates: Partial<DataNode>) => {
+  const deleteNode = useCallback((nodeId: string) => {
+    recordSnapshot();
     setArchitecture(prev => ({
       ...prev,
-      dataNodes: prev.dataNodes.map(node =>
-        node.id === nodeId ? { ...node, ...updates } : node
+      dataNodes: prev.dataNodes.filter(node => node.id !== nodeId),
+      connections: prev.connections.filter(conn => 
+        conn.sourceNodeId !== nodeId && conn.targetNodeId !== nodeId
+      )
+    }));
+    setInternalConnections(prev => prev.filter(conn => conn.nodeId !== nodeId));
+  }, [recordSnapshot]);
+
+  const addConnection = useCallback((
+    sourceNodeId: string,
+    targetNodeId: string,
+    sourcePortId: string,
+    targetPortId: string
+  ) => {
+    recordSnapshot();
+    const newConnection: Connection = {
+      id: `conn-${Date.now()}`,
+      sourceNodeId,
+      targetNodeId,
+      sourcePortId,
+      targetPortId,
+      label: 'Data Flow'
+    };
+
+    setArchitecture(prev => ({
+      ...prev,
+      connections: [...prev.connections, newConnection]
+    }));
+  }, [recordSnapshot]);
+
+  const updateConnection = useCallback((connectionId: string, updates: Partial<Connection>) => {
+    setArchitecture(prev => ({
+      ...prev,
+      connections: prev.connections.map(conn =>
+        conn.id === connectionId ? { ...conn, ...updates } : conn
       )
     }));
   }, []);
 
-  // Replace the original updateNode with our enhanced version
-  const enhancedUpdateNode = updateNodeEnhanced;
+  const deleteConnection = useCallback((connectionId: string) => {
+    recordSnapshot();
+    setArchitecture(prev => ({
+      ...prev,
+      connections: prev.connections.filter(conn => conn.id !== connectionId)
+    }));
+  }, [recordSnapshot]);
+
+  const addBehaviouralElement = useCallback((nodeId: string, element: BehaviouralElement) => {
+    recordSnapshot();
+    const node = architecture.dataNodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const updatedElements = [...node.behaviouralElements, element];
+    
+    setArchitecture(prev => ({
+      ...prev,
+      dataNodes: prev.dataNodes.map(n =>
+        n.id === nodeId ? { ...n, behaviouralElements: updatedElements } : n
+      )
+    }));
+
+    // Auto-create special connections for Receive Data and Send Data elements
+    if (element.type === 'ReceiveData') {
+      const inputPorts = node.messagePorts.filter(p => p.type === 'input');
+      const newConns: InternalConnection[] = inputPorts.map(inputPort => ({
+        id: `internal-conn-${Date.now()}-${Math.random()}`,
+        sourceElementId: inputPort.id,
+        targetElementId: element.id,
+        nodeId: nodeId
+      }));
+      if (newConns.length > 0) {
+        setInternalConnections(prev => [...prev, ...newConns]);
+      }
+    } else if (element.type === 'SendData') {
+      const outputPorts = node.messagePorts.filter(p => p.type === 'output');
+      const newConns: InternalConnection[] = outputPorts.map(outputPort => ({
+        id: `internal-conn-${Date.now()}-${Math.random()}`,
+        sourceElementId: element.id,
+        targetElementId: outputPort.id,
+        nodeId: nodeId
+      }));
+      if (newConns.length > 0) {
+        setInternalConnections(prev => [...prev, ...newConns]);
+      }
+    }
+  }, [architecture.dataNodes, recordSnapshot]);
 
   const addInternalConnection = useCallback((
     nodeId: string,
     sourceElementId: string,
     targetElementId: string
   ) => {
+    recordSnapshot();
     const newConnection: InternalConnection = {
       id: `internal-conn-${Date.now()}`,
       sourceElementId,
@@ -235,11 +276,12 @@ export const useDataArchitecture = () => {
     };
 
     setInternalConnections(prev => [...prev, newConnection]);
-  }, []);
+  }, [recordSnapshot]);
 
   const deleteInternalConnection = useCallback((connectionId: string) => {
+    recordSnapshot();
     setInternalConnections(prev => prev.filter(conn => conn.id !== connectionId));
-  }, []);
+  }, [recordSnapshot]);
 
   const handleInternalPortClick = useCallback((
     nodeId: string,
@@ -248,41 +290,33 @@ export const useDataArchitecture = () => {
   ) => {
     if (internalConnectingFrom) {
       if (internalConnectingFrom.nodeId === nodeId && internalConnectingFrom.elementId !== elementId) {
-        // Determine connection validity based on port types and element types
         const isSourcePort = internalConnectingFrom.elementId.startsWith('port-');
         const isTargetPort = elementId.startsWith('port-');
         
         let isValidConnection = false;
         
-        // Rule 1: Input ports (green) to element input ports (green)
+        // Rule 1: Input ports to element input ports
         if (isSourcePort && !isTargetPort && portType === 'input') {
           const sourcePort = architecture.dataNodes
             .find(n => n.id === nodeId)?.messagePorts
             .find(p => p.id === internalConnectingFrom.elementId);
           isValidConnection = sourcePort?.type === 'input';
         }
-        // Rule 2: Element output ports (red) to element input ports (green)
+        // Rule 2: Element output ports to element input ports
         else if (!isSourcePort && !isTargetPort) {
-          // Any element output (red) to any element input (green)
           if (internalConnectingFrom.portType === 'output' && portType === 'input') {
             isValidConnection = true;
           }
-          // Also allow output to output for special cases
-          else if (internalConnectingFrom.portType === 'output' && portType === 'output') {
-            isValidConnection = false; // Keep this false for now
-          }
         }
-        // Rule 3: Element output ports (red) to node output ports (red)
-        else if (!isSourcePort && isTargetPort && 
-                 internalConnectingFrom.portType === 'output') {
+        // Rule 3: Element output ports to node output ports
+        else if (!isSourcePort && isTargetPort && internalConnectingFrom.portType === 'output') {
           const targetPort = architecture.dataNodes
             .find(n => n.id === nodeId)?.messagePorts
             .find(p => p.id === elementId);
           isValidConnection = targetPort?.type === 'output';
         }
         // Rule 4: Send Data special blue port to node output ports
-        else if (!isSourcePort && isTargetPort && 
-                 internalConnectingFrom.portType === 'nodeOutput') {
+        else if (!isSourcePort && isTargetPort && internalConnectingFrom.portType === 'nodeOutput') {
           const sourceElement = architecture.dataNodes
             .find(n => n.id === nodeId)?.behaviouralElements
             .find(el => el.id === internalConnectingFrom.elementId);
@@ -307,8 +341,6 @@ export const useDataArchitecture = () => {
     const node = architecture.dataNodes.find(n => n.id === elementId);
     if (node) {
       deleteNode(elementId);
-      // Also delete internal connections for this node
-      setInternalConnections(prev => prev.filter(conn => conn.nodeId !== elementId));
       return;
     }
 
@@ -333,12 +365,13 @@ export const useDataArchitecture = () => {
 
   const importModel = useCallback((modelJson: string) => {
     try {
+      recordSnapshot();
       const parsedModel = JSON.parse(modelJson);
       setArchitecture({
-        id: parsedModel.id,
-        name: parsedModel.name,
-        dataNodes: parsedModel.dataNodes,
-        connections: parsedModel.connections
+        id: parsedModel.id || `arch-${Date.now()}`,
+        name: parsedModel.name || 'Imported Architecture',
+        dataNodes: parsedModel.dataNodes || [],
+        connections: parsedModel.connections || []
       });
       setInternalConnections(parsedModel.internalConnections || []);
       setSelectedElement(null);
@@ -346,13 +379,33 @@ export const useDataArchitecture = () => {
     } catch (error) {
       console.error('Failed to import model:', error);
     }
-  }, []);
+  }, [recordSnapshot]);
+
+  const applyAutoLayout = useCallback(() => {
+
+    if (architecture.dataNodes.length === 0) return;
+    recordSnapshot();
+    const newPositions = computeAutoLayout(architecture.dataNodes, architecture.connections);
+    setArchitecture(prev => ({
+      ...prev,
+      dataNodes: prev.dataNodes.map(node =>
+        newPositions[node.id] ? { ...node, position: newPositions[node.id] } : node
+      )
+    }));
+  }, [architecture.dataNodes, architecture.connections, recordSnapshot]);
 
   return {
     architecture,
     internalConnections,
     selectedElement,
     internalConnectingFrom,
+    canUndo: history.past.length > 0,
+    canRedo: history.future.length > 0,
+    undo,
+    redo,
+    clearCanvas,
+    applyAutoLayout,
+    recordSnapshot,
     setSelectedElement,
     setInternalConnectingFrom,
     addDataNode,
