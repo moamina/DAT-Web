@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { DataNode, Connection, BehaviouralElement, InternalConnection } from '../types/ModelTypes';
+import { QUALITY_DIMENSIONS } from '../data/ToolboxData';
 
 interface PropertiesPanelProps {
   selectedElement: string | null;
@@ -285,7 +286,7 @@ const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                             Quality Metrics:
                           </label>
                           <div className="grid grid-cols-1 gap-1 max-h-32 overflow-y-auto">
-                            {(element.properties?.availableMetrics || []).map((metric: string) => (
+                            {(element.properties?.availableMetrics || QUALITY_DIMENSIONS).map((metric: string) => (
                               <label key={metric} className="flex items-center text-xs">
                                 <input
                                   type="checkbox"

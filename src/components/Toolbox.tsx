@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { toolboxCategories } from '../data/ToolboxData';
+import { toolboxCategories, getDefaultProperties } from '../data/ToolboxData';
 import { ToolboxItem } from '../types/ModelTypes';
 import { ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 
@@ -24,7 +24,8 @@ const Toolbox: React.FC<ToolboxProps> = ({ onDragStart }) => {
   };
 
   const handleDragStart = (item: ToolboxItem, e: React.DragEvent) => {
-    e.dataTransfer.setData('application/json', JSON.stringify(item));
+    const payload = { ...item, properties: item.properties ?? getDefaultProperties(item.type) };
+    e.dataTransfer.setData('application/json', JSON.stringify(payload));
     onDragStart(item, e);
   };
 

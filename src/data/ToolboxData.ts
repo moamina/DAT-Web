@@ -1,5 +1,10 @@
 import { ToolboxItem } from '../types/ModelTypes';
 
+export const QUALITY_DIMENSIONS = [
+  'Completeness', 'Consistency', 'Validity', 'Accuracy',
+  'Timeliness', 'Uniqueness', 'Integrity'
+];
+
 export const toolboxCategories: Record<string, ToolboxItem[]> = {
   'Basic Elements': [
     { id: 'datanode', name: 'Data Node', type: 'DataNode', icon: '📦', color: '#6B7280', category: 'Basic Elements' }
@@ -126,7 +131,7 @@ export const getAllToolboxItems = (): ToolboxItem[] => {
   return items;
 };
 
-function getDefaultProperties(type: string): Record<string, any> {
+export function getDefaultProperties(type: string): Record<string, any> {
   switch (type) {
     case 'RelationalDB':
       return { dbName: 'Database' };
@@ -137,7 +142,7 @@ function getDefaultProperties(type: string): Record<string, any> {
     case 'VerifyData':
       return { 
         QualityMetrics: [], 
-        availableMetrics: ['Completeness', 'Consistency', 'Validity', 'Accuracy', 'Timeliness', 'Uniqueness', 'Integrity'],
+        availableMetrics: [...QUALITY_DIMENSIONS],
         desc: '' 
       };
     case 'SMS':

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { BehaviouralElement } from '../types/ModelTypes';
+import { createPortal } from 'react-dom';
 import { X, Settings } from 'lucide-react';
+import { QUALITY_DIMENSIONS } from '../data/ToolboxData';
 
 interface BehaviouralElementComponentProps {
   element: BehaviouralElement;
@@ -127,10 +129,7 @@ const BehaviouralElementComponent: React.FC<BehaviouralElementComponentProps> = 
     });
   };
 
-  const availableMetrics = [
-    'Completeness', 'Consistency', 'Validity', 'Accuracy', 
-    'Timeliness', 'Uniqueness', 'Integrity'
-  ];
+  const availableMetrics = QUALITY_DIMENSIONS;
 
   // Helper function to get metric descriptions
   const getMetricDescription = (metric: string): string => {
@@ -249,16 +248,16 @@ const BehaviouralElementComponent: React.FC<BehaviouralElementComponentProps> = 
               {element.name}
             </span>
           )}
-          {element.type === 'VerifyData' && element.properties?.QualityMetrics?.length > 0 && (
+          {element.type === 'VerifyData' && (element.properties?.QualityMetrics?.length ?? 0) > 0 && (
             <span className="ml-1 text-xs bg-blue-500 text-white rounded-full px-1">
-              {element.properties.QualityMetrics.length}
+              {element.properties?.QualityMetrics?.length}
             </span>
           )}
         </div>
       </div>
 
       {/* Quality Metrics Popup */}
-      {element.type === 'VerifyData' && showMetrics && (
+      {element.type === 'VerifyData' && showMetrics && createPortal(
         <>
           {/* Backdrop */}
           <div 
@@ -378,7 +377,8 @@ const BehaviouralElementComponent: React.FC<BehaviouralElementComponentProps> = 
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </>
   );

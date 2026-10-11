@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { DataNode, Position, BehaviouralElement, InternalConnection } from '../types/ModelTypes';
 import { ChevronDown, ChevronRight, Plus, Minus, X } from 'lucide-react';
 import BehaviouralElementComponent from './BehaviouralElementComponent';
+import { QUALITY_DIMENSIONS } from '../data/ToolboxData';
 
 interface DataNodeComponentProps {
   node: DataNode;
@@ -234,7 +235,7 @@ const DataNodeComponent: React.FC<DataNodeComponentProps> = ({
       size: { width: 120, height: 40 },
       properties: type === 'VerifyData' ? {
         QualityMetrics: [],
-        availableMetrics: ['Completeness', 'Consistency', 'Validity', 'Accuracy', 'Timeliness', 'Uniqueness', 'Integrity'],
+        availableMetrics: [...QUALITY_DIMENSIONS],
         desc: ''
       } : {}
     };
